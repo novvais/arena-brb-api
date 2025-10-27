@@ -1,0 +1,125 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  fullName     String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  userRole UserRole[]
+  research Research[]
+
+  @@map("users")
+}
+
+model Role {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  userRole UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  roleId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+  role Role @relation(fields: [roleId], references: [id])
+
+  @@map("user_roles")
+}
+
+enum GenderIdentity {
+  CISGENDER_WOMAN
+  TRANSGENDER_WOMAN
+  CISGENDER_MAN
+  TRANSGENDER_MAN
+  PREFER_NOT_TO_INFORM
+}
+
+enum AgeRange {
+  UNDER_18
+  AGE_18_25
+  AGE_26_35
+  AGE_36_45
+  OVER_45
+}
+
+enum EventType {
+  SHOWS_FESTIVALS
+  EXECUTIVE_EVENT
+  SOCCER_GAME
+  CHILDREN_EVENT
+  GUIDED_TOUR
+}
+
+enum TransportType {
+  PRIVATE_CAR
+  APP_UBER_99
+  PUBLIC_TRANSPORT
+  RIDE_TAXI
+  OTHER
+}
+
+model Research {
+  id                    Int           @id @default(autoincrement())
+  userId                Int
+  genderIdentity        GenderIdentity?
+  ageRange              AgeRange?
+  eventType             EventType?
+  transportType         TransportType?
+  recommendationScore   Int?          @default(0)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  deletedAt             DateTime?
+  
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("research")
+}
+
+model Dashboard {
+  id                           Int           @id @default(autoincrement())
+  period                       String        // Ex: "2024-01" para período mensal
+  totalResponses               Int           @default(0)
+  averageRecommendationScore   Float?        @default(0)
+  genderIdentityDistribution   Json?         // Distribuição por identidade de gênero
+  ageRangeDistribution         Json?         // Distribuição por faixa etária
+  eventTypeDistribution        Json?         // Distribuição por tipo de evento
+  transportTypeDistribution    Json?         // Distribuição por meio de transporte
+  createdAt                    DateTime      @default(now())
+  updatedAt                    DateTime      @updatedAt
+  deletedAt                    DateTime?
+
+  @@unique([period])
+  @@map("dashboard")
+}
+
+

@@ -6,6 +6,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateDashboardDTO } from './dtos/createDashboard.dto';
 import { UpdateDashboardDTO } from './dtos/updateDashboard.dto';
+import { DashboardFilterDto } from './dtos/dashboardFilter.dto';
 import { Dashboard } from '@prisma/client';
 
 @Injectable()
@@ -207,5 +208,179 @@ export class DashboardService {
         data: dashboardData,
       });
     }
+  }
+
+  async getSurveyAnalytics(filters: DashboardFilterDto) {
+    // Build where clause based on filters
+    const where: any = {
+      deletedAt: null,
+    };
+
+    if (filters.startDate || filters.endDate) {
+      where.createdAt = {};
+      if (filters.startDate) {
+        where.createdAt.gte = new Date(filters.startDate);
+      }
+      if (filters.endDate) {
+        where.createdAt.lte = new Date(filters.endDate);
+      }
+    }
+
+    if (filters.genderIdentity) {
+      where.genderIdentity = filters.genderIdentity;
+    }
+
+    if (filters.ageRange) {
+      where.ageRange = filters.ageRange;
+    }
+
+    if (filters.eventType) {
+      where.eventType = filters.eventType;
+    }
+
+    // Get total responses
+    const totalResponses = await this.prisma.research.count({ where });
+
+    // Get NPS average
+    const npsAverage = await this.prisma.research.aggregate({
+      where,
+      _avg: {
+        recommendationScore: true,
+      },
+    });
+
+    // Get next vibe score average
+    const nextVibeAverage = await this.prisma.research.aggregate({
+      where,
+      _avg: {
+        nextVibeScore: true,
+      },
+    });
+
+    // Group by gender identity
+    const genderBreakdown = await this.prisma.research.groupBy({
+      by: ['genderIdentity'],
+      _count: { genderIdentity: true },
+      where,
+    });
+
+    // Group by age range
+    const ageRangeBreakdown = await this.prisma.research.groupBy({
+      by: ['ageRange'],
+      _count: { ageRange: true },
+      where,
+    });
+
+    // Group by event type
+    const eventTypeBreakdown = await this.prisma.research.groupBy({
+      by: ['eventType'],
+      _count: { eventType: true },
+      where,
+    });
+
+    // Group by transport type
+    const transportTypeBreakdown = await this.prisma.research.groupBy({
+      by: ['transportType'],
+      _count: { transportType: true },
+      where,
+    });
+
+    // Group by gate findability
+    const gateFindabilityBreakdown = await this.prisma.research.groupBy({
+      by: ['gateFindability'],
+      _count: { gateFindability: true },
+      where,
+    });
+
+    // Group by highlight
+    const highlightBreakdown = await this.prisma.research.groupBy({
+      by: ['highlight'],
+      _count: { highlight: true },
+      where,
+    });
+
+    // Group by frustration
+    const frustrationBreakdown = await this.prisma.research.groupBy({
+      by: ['frustration'],
+      _count: { frustration: true },
+      where,
+    });
+
+    // Transform groupBy results to object format
+    const transformToObject = (array: any[], key: string) => {
+      return array.reduce((acc, item) => {
+        if (item[key] !== null) {
+          acc[item[key]] = item._count[key] || item._count;
+        }
+        return acc;
+      }, {});
+    };
+
+    return {
+      totalResponses,
+      npsAverage: npsAverage._avg.recommendationScore || 0,
+      nextVibeAverage: nextVibeAverage._avg.nextVibeScore || 0,
+      genderBreakdown: transformToObject(genderBreakdown, 'genderIdentity'),
+      ageRangeBreakdown: transformToObject(ageRangeBreakdown, 'ageRange'),
+      eventTypeBreakdown: transformToObject(eventTypeBreakdown, 'eventType'),
+      transportTypeBreakdown: transformToObject(
+        transportTypeBreakdown,
+        'transportType',
+      ),
+      gateFindabilityBreakdown: transformToObject(
+        gateFindabilityBreakdown,
+        'gateFindability',
+      ),
+      highlightBreakdown: transformToObject(highlightBreakdown, 'highlight'),
+      frustrationBreakdown: transformToObject(
+        frustrationBreakdown,
+        'frustration',
+      ),
+    };
+  }
+
+  async getPreferenceAnalytics(startDate?: string, endDate?: string) {
+    // Build where clause based on date filters
+    const where: any = {};
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        where.createdAt.lte = new Date(endDate);
+      }
+    }
+
+    // Get total submissions
+    const totalSubmissions = await this.prisma.preferenceSubmission.count({
+      where,
+    });
+
+    // Get all preference submissions
+    const allPreferences = await this.prisma.preferenceSubmission.findMany({
+      where,
+      select: {
+        preferences: true,
+      },
+    });
+
+    // Count each preference
+    const preferenceBreakdown: Record<string, number> = {};
+    allPreferences.forEach((submission) => {
+      submission.preferences.forEach((preference) => {
+        if (preferenceBreakdown[preference]) {
+          preferenceBreakdown[preference]++;
+        } else {
+          preferenceBreakdown[preference] = 1;
+        }
+      });
+    });
+
+    return {
+      totalSubmissions,
+      preferenceBreakdown,
+    };
   }
 }

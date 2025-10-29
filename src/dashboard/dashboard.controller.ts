@@ -8,10 +8,12 @@ import {
   Param,
   ParseIntPipe,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { CreateDashboardDTO } from './dtos/createDashboard.dto';
 import { UpdateDashboardDTO } from './dtos/updateDashboard.dto';
+import { DashboardFilterDto } from './dtos/dashboardFilter.dto';
 import { JwtAuthGuard } from 'src/auth/strategy/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/roles/roles.guard';
 import { Roles } from 'src/auth/roles/roles.decorator';
@@ -59,5 +61,21 @@ export class DashboardController {
   @Delete(':id')
   async deleteDashboard(@Param('id', ParseIntPipe) id: number) {
     return await this.dashboardService.deleteDashboard(id);
+  }
+
+  @Get('analytics/survey')
+  async getSurveyAnalytics(@Query() filters: DashboardFilterDto) {
+    return await this.dashboardService.getSurveyAnalytics(filters);
+  }
+
+  @Get('analytics/preference')
+  async getPreferenceAnalytics(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return await this.dashboardService.getPreferenceAnalytics(
+      startDate,
+      endDate,
+    );
   }
 }

@@ -88,16 +88,57 @@ enum TransportType {
   OTHER
 }
 
+enum Findability {
+  EXTREMELY_EASY
+  EASY
+  REASONABLE
+  DIFFICULT
+  VERY_DIFFICULT
+}
+
+enum Highlight {
+  EVENT_QUALITY
+  STAFF_SERVICE
+  BATHROOM_CLEANLINESS
+  FOOD_AREAS
+  OVERALL_STRUCTURE
+  ACCESSIBILITY
+}
+
+enum Frustration {
+  PARKING_ARRIVAL
+  ENTRY_QUEUES
+  FOOD_PRICES
+  BATHROOM_WAIT
+  NOTHING_FRUSTRATED
+}
+
 model Research {
-  id                    Int           @id @default(autoincrement())
+  id                    Int             @id @default(autoincrement())
   userId                Int
+  // Q1: Como você se declara?
   genderIdentity        GenderIdentity?
+  // Q2: Qual é a sua faixa etária?
   ageRange              AgeRange?
+  // Q3: Qual tipo de evento você participou?
   eventType             EventType?
+  // Q4: Qual foi o principal meio de transporte?
   transportType         TransportType?
-  recommendationScore   Int?          @default(0)
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  // Q5: NPS (0-10)
+  recommendationScore   Int?            @default(0)
+  // Q6: Facilidade para encontrar o portão?
+  gateFindability       Findability?
+  // Q7: Área de destaque?
+  highlight             Highlight?
+  // Q8: Ponto de frustração?
+  frustration           Frustration?
+  // Q9: 'Vibe' para o próximo evento (0-10)
+  nextVibeScore         Int?
+  // Q10: Qual próximo artista?
+  artistWish            String?
+  
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
   deletedAt             DateTime?
   
   user User @relation(fields: [userId], references: [id])
@@ -122,4 +163,11 @@ model Dashboard {
   @@map("dashboard")
 }
 
+// Model for Site 1: Preference Form
+model PreferenceSubmission {
+  id          String   @id @default(cuid())
+  preferences String[] // Array of strings, ex: ["shows", "football", "cultural"]
+  createdAt   DateTime @default(now())
 
+  @@map("preference_submissions")
+}
